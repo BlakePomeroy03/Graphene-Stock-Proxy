@@ -1,0 +1,19 @@
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Python / Backend
+backend-proxy/__pycache__/
+backend-proxy/venv/
+backend-proxy/.env
+
+# Android / Frontend
+android-widget/build/
+android-widget/.gradle/
+android-widget/local.properties
+android-widget/.idea/
+*.apk
+*.aab

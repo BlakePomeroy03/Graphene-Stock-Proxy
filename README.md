@@ -1,0 +1,1 @@
+A privacy-first, self-hosted financial dashboard designed for hardened Android environments.
