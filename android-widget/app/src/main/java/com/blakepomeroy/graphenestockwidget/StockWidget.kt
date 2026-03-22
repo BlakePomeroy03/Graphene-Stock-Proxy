@@ -21,7 +21,7 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
-import androidx.glance.state.PreferencesGlanceStateDefinition // <-- Add this import
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -31,45 +31,72 @@ import com.google.gson.reflect.TypeToken
 
 class StockWidget : GlanceAppWidget() {
 
-    // THIS IS THE MISSING LINK: Tell Glance to use Android Preferences for state
     override val stateDefinition = PreferencesGlanceStateDefinition
 
     companion object {
         val stockDataKey = stringPreferencesKey("stock_data")
+        val lastUpdatedKey = stringPreferencesKey("last_updated")
     }
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
-            // Now currentState<Preferences>() will actually work
             val prefs = currentState<Preferences>()
-            val jsonString = prefs[stockDataKey] ?: "[]"
+            val jsonString = prefs[stockDataKey]
+            val lastUpdated = prefs[lastUpdatedKey] ?: "Never"
 
-            val type = object : TypeToken<List<StockData>>() {}.type
-            val liveData: List<StockData> = Gson().fromJson(jsonString, type)
+            // 1. Isolate the parsing logic OUTSIDE the UI nodes
+            var liveData: List<StockData>? = null
+            var parseError: String? = null
 
+            if (jsonString != null && jsonString != "[]") {
+                try {
+                    val type = object : TypeToken<List<StockData>>() {}.type
+                    liveData = Gson().fromJson(jsonString, type)
+                } catch (e: Exception) {
+                    parseError = e.message
+                }
+            }
+
+            // 2. Safely render the UI based on the variables
             Column(
                 modifier = GlanceModifier
                     .fillMaxSize()
                     .background(Color(0xFF121212))
                     .padding(16.dp)
             ) {
-                if (liveData.isEmpty()) {
+                if (jsonString == null) {
                     Text(
-                        text = "Loading data...",
-                        style = TextStyle(color = ColorProvider(Color.Gray), fontSize = 16.sp)
+                        text = "Awaiting Worker...",
+                        style = TextStyle(color = ColorProvider(Color.Yellow), fontSize = 16.sp)
                     )
-                } else {
+                } else if (jsonString == "[]") {
+                    Text(
+                        text = "Python returned empty array.",
+                        style = TextStyle(color = ColorProvider(Color.Yellow), fontSize = 16.sp)
+                    )
+                } else if (parseError != null) {
+                    Text(
+                        text = "JSON Crash: $parseError",
+                        style = TextStyle(color = ColorProvider(Color.Red), fontSize = 12.sp)
+                    )
+                } else if (liveData != null) {
                     liveData.forEach { stock ->
                         StockRow(stock = stock)
                         Spacer(modifier = GlanceModifier.height(12.dp))
                     }
+
+                    Spacer(modifier = GlanceModifier.defaultWeight())
+
+                    Text(
+                        text = "Last updated: $lastUpdated",
+                        style = TextStyle(color = ColorProvider(Color.Gray), fontSize = 12.sp),
+                        modifier = GlanceModifier.fillMaxWidth()
+                    )
                 }
             }
         }
     }
 }
-
-// ... StockRow composable remains exactly the same below this ...
 
 @Composable
 fun StockRow(stock: StockData) {
