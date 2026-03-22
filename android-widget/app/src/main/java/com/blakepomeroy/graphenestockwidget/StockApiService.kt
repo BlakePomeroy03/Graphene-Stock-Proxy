@@ -9,7 +9,7 @@ interface StockApiService {
     suspend fun getStocks(): List<StockData>
 
     companion object {
-        private const val BASE_URL = "http://127.0.0.1:8000/"
+        private const val BASE_URL = "example"
 
         fun create(): StockApiService {
             return Retrofit.Builder()
