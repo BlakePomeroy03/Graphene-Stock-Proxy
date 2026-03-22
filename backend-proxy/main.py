@@ -18,8 +18,13 @@ class StockResponse(BaseModel):
     isUp: bool
 
 def fetch_stock_data(ticker: str) -> StockResponse:
+    print(f"Fetching data for {ticker}...")
     params = {"symbol": ticker, "token": FINNHUB_API_KEY}
-    response = requests.get(FINNHUB_URL, params=params)
+    
+    # Add timeout=5 to prevent infinite hanging
+    response = requests.get(FINNHUB_URL, params=params, timeout=5)
+    
+    print(f"Response status for {ticker}: {response.status_code}")
     
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail="Failed to fetch data")
@@ -43,7 +48,7 @@ def fetch_stock_data(ticker: str) -> StockResponse:
 def health_check():
     return {"status": "Proxy is active"}
 
-@app.get("/api/stocks", response_model=list[StockResponse])
+@app.get("/api/stocks")
 def get_stocks(tickers: str = "XLK,AMD,VOO"):
     ticker_list = [t.strip() for t in tickers.split(",")]
     results = []
@@ -52,7 +57,8 @@ def get_stocks(tickers: str = "XLK,AMD,VOO"):
         try:
             stock_data = fetch_stock_data(ticker)
             results.append(stock_data)
-        except HTTPException:
-            continue 
+        except HTTPException as e:
+            # Return the exact error to the browser instead of skipping
+            return {"error": f"Failed on {ticker}", "detail": e.detail, "status_code": e.status_code}
 
     return results
