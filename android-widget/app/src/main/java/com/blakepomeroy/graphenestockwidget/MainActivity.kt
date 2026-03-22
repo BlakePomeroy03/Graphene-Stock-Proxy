@@ -3,45 +3,37 @@ package com.blakepomeroy.graphenestockwidget
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.blakepomeroy.graphenestockwidget.ui.theme.GrapheneStockWidgetTheme
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+
+        val workManager = WorkManager.getInstance(this)
+
+        val immediateRequest = OneTimeWorkRequestBuilder<StockWorker>().build()
+        workManager.enqueue(immediateRequest)
+
+        val periodicRequest = PeriodicWorkRequestBuilder<StockWorker>(15, TimeUnit.MINUTES).build()
+        workManager.enqueueUniquePeriodicWork(
+            "StockWidgetPeriodicUpdate",
+            ExistingPeriodicWorkPolicy.KEEP,
+            periodicRequest
+        )
+
         setContent {
-            GrapheneStockWidgetTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Widget engine is running. You can close this app.")
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    GrapheneStockWidgetTheme {
-        Greeting("Android")
     }
 }
